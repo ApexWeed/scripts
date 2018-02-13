@@ -1,0 +1,75 @@
+#!/usr/bin/python
+import os
+from pprint import pprint
+from mutagen.flac import FLAC
+
+bads = [('<', ''), ('>', ''), (':', '∶'), ('"', "'"), ('/', '-'), ('\\', '-'), ('|', '-'),
+        ('?', ''), ('*', '')]
+
+class File:
+    def __init__(self, path, flac):
+        self.path = path
+        self.flac = flac
+
+    def __str__(self):
+        return self.path
+
+def locate(root, match_function, ignore_dotfiles=True):
+    '''
+    Yields all filenames within the root directory for which match_function returns True.
+    '''
+    for path, dirs, files in os.walk(root):
+        for filename in (os.path.abspath(os.path.join(path, filename)) for filename in files if match_function(filename)):
+            if ignore_dotfiles and os.path.basename(filename).startswith('.'):
+                pass
+            else:
+                yield filename
+
+def ext_matcher(*extensions):
+    '''
+    Returns a function which checks if a filename has one of the specified extensions.
+    '''
+    return lambda f: os.path.splitext(f)[-1].lower() in extensions
+
+def escape(file):
+    for bad in bads:
+        file = file.replace(*bad)
+    
+    return file
+
+files = sorted(list(File(file, FLAC(file)) for file in locate('.', ext_matcher('.flac'))),
+        key=lambda file: int(file.flac['TrackNumber'][0]))
+
+padding = min(2, len(str(len(files))))
+length = str(len(files)).zfill(padding)
+bitdepths = dict()
+
+for file in files:
+    file.flac['TrackNumber'] = file.flac['TrackNumber'][0].zfill(padding)
+    file.flac['TrackTotal'] = length
+    file.flac['DiscNumber'] = '1'
+    file.flac['DiscTotal'] = '1'
+    file.flac.save()
+    new_name = '{} - {} - {}.flac'.format(escape(file.flac['TrackNumber'][0]),
+                                          escape(file.flac['Artist'][0]),
+                                          escape(file.flac['Title'][0]))
+
+    if file.path != new_name:
+        os.rename(file.path, new_name)
+
+    depth = file.flac.info.bits_per_sample
+    if not depth in bitdepths:
+        bitdepths[depth] = list()
+
+    bitdepths[depth].append(file.flac['TrackNumber'][0])
+
+for depth, count in bitdepths.items():
+    print("{} bit: {} ({})".format(str(depth), str(len(count)), ", ".join(count)))
+
+print("Suggested folder name:")
+flac = files[0].flac
+format = 'FLAC24' if 24 in bitdepths else 'FLAC'
+print("{} - {} ({}) [{}] {{WEB}}".format(escape(flac['AlbumArtist'][0]),
+                                         escape(flac['Album'][0]),
+                                         escape(flac['Date'][0]),
+                                         format))
