@@ -1,0 +1,4 @@
+#!/bin/bash
+
+#FIL=`printf "%q" "$1"`
+metaflac --export-picture-to=- "$1" | identify -

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+for file in *.flac
+do
+    echo "$file"
+    oldfile="${file%.*}_old.flac"
+    mv "$file" "$oldfile"
+    sox "$oldfile" "$file"
+    rm "$oldfile"
+done

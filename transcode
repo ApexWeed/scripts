@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if (( $# > 1 )); then
+    echo "Usage: $(basename $0) [sample rate]"
+    exit 1
+fi
+
+mkdir new
+
+if (( $# == 1 )); then
+    for file in *.flac
+    do
+        sox -S "$file" -G -b 16 new/"$file" rate -v -L "$1" dither
+    done
+
+    echo "Transcoded via sox infile.flac -G -b 16 outfile.flac rate -v -L 48000 dither"
+elif (( $# == 0 )); then
+    for file in *.flac
+    do
+        sox -S "$file" -G -b 16 new/"$file"
+    done
+
+    echo "Transcoded via sox infile.flac -G -b 16 outfile.flac"
+fi

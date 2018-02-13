@@ -1,0 +1,27 @@
+#!/bin/bash
+
+function calctime {
+    if (( $1 > 3600 )); then
+        printf '%d:%02d:%02d\n' $(($1/3600)) $(($1%3600/60)) $(($1%60))
+    else
+        printf '%d:%02d\n' $(($1%3600/60)) $(($1%60))
+    fi
+}
+
+REGEX="([0-9]*)\..*"
+TOTALSECS="0"
+for a in *.flac; do
+    ARTIST=`metaflac "$a" --show-tag=ARTIST | sed s/.*=//g`
+    TITLE=`metaflac "$a" --show-tag=TITLE | sed s/.*=//g`
+    TRACKNUMBER=`metaflac "$a" --show-tag=TRACKNUMBER | sed s/.*=//g`
+    SECS=`metaflac --show-total-samples --show-sample-rate "$a" | tr '\n' ' ' | awk '{print $1/$2}' -`
+    if [[ $SECS =~ $REGEX ]]
+    then
+        SECS="${BASH_REMATCH[1]}"
+    fi
+    (( TOTALSECS=TOTALSECS+SECS ))
+
+    printf "[b]`printf %02g $TRACKNUMBER`[/b]. [artist]$ARTIST[/artist] - $TITLE [i]($(calctime $SECS))[/i]\n"
+done
+
+printf "\nTotal length: $(calctime $TOTALSECS)\n"
